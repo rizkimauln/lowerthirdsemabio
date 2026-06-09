@@ -17,6 +17,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Serve the GIFs directly from the main directory
 app.use('/gifs', express.static(GIF_DIR));
 
+// Redirect root to panel
+app.get('/', (req, res) => {
+    res.redirect('/panel.html');
+});
+
 // API to get list of GIFs
 app.get('/api/gifs', (req, res) => {
     fs.readdir(GIF_DIR, (err, files) => {
