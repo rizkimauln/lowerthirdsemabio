@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lower Third Control Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background-color: var(--danger-hover);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border-color: #475569;
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            margin: 0 0 20px 0;
+            text-align: center;
+            color: #e2e8f0;
+            word-break: break-word;
+        }
+
+        .card-actions {
+            margin-top: auto;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .card-actions .btn {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1rem;
+        }
+
+        .status-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 30px;
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--danger);
+        }
+
+        .status-dot.connected {
+            background-color: #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>OBS Lower Thirds</h1>
+        <p class="subtitle">Select a lower third to play on stream</p>
+    </header>
+
+
+    <div class="grid" id="gif-grid">
+        <!-- Cards will be populated here -->
+    </div>
+
+    <div class="status-indicator">
+        <div class="status-dot" id="socket-status"></div>
+        <span id="socket-text">Disconnected</span>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const statusDot = document.getElementById('socket-status');
+        const statusText = document.getElementById('socket-text');
+        const grid = document.getElementById('gif-grid');
+
+        socket.on('connect', () => {
+            statusDot.classList.add('connected');
+            statusText.textContent = 'Connected';
+        });
+
+        socket.on('disconnect', () => {
+            statusDot.classList.remove('connected');
+            statusText.textContent = 'Disconnected';
+        });
+
+        // Fetch GIFs from API
+        fetch('/api/gifs')
+            .then(res => res.json())
+            .then(gifs => {
+                if (gifs.length === 0) {
+                    grid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: var(--text-muted);">No GIF files found in the directory.</p>';
+                    return;
+                }
+
+                gifs.forEach(gif => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    
+                    // Format name for display (remove .gif and replace underscores with space)
+                    const displayName = gif.replace('.gif', '').replace(/_/g, ' ');
+
+                    card.innerHTML = `
+                        <h3>${displayName}</h3>
+                        <div class="card-actions">
+                            <button class="btn" onclick="playGif('${gif}')">
+                                <svg style="width: 20px; height: 20px; vertical-align: middle; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Play
+                            </button>
+                            <button class="btn btn-danger" onclick="stopAll()">
+                                <svg style="width: 20px; height: 20px; vertical-align: middle; margin-right: 5px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+                                Stop
+                            </button>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            })
+            .catch(err => {
+                console.error("Failed to load GIFs", err);
+                grid.innerHTML = '<p style="grid-column: 1 / -1; text-align: center; color: var(--danger);">Failed to load GIFs from server.</p>';
+            });
+
+        function playGif(gifName) {
+            socket.emit('play-gif', gifName);
+        }
+
+        function stopAll() {
+            socket.emit('stop-gif');
+        }
+    </script>
+</body>
+</html>

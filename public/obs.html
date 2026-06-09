@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Lower Third Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* Transparent background for OBS */
+            background-color: transparent;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end; /* Show lower third at the bottom */
+            padding-bottom: 50px; /* Some padding from the bottom edge */
+        }
+        
+        #lower-third-container {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            max-width: 80%; /* Adjust size as needed */
+        }
+
+        #lower-third-container.visible {
+            opacity: 1;
+        }
+
+        #lower-third-img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="lower-third-container">
+        <img id="lower-third-img" src="" alt="Lower Third">
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const container = document.getElementById('lower-third-container');
+        const img = document.getElementById('lower-third-img');
+
+        socket.on('show-gif', (gifName) => {
+            console.log("Showing GIF:", gifName);
+            
+            // To ensure the GIF restarts its animation, we append a timestamp
+            // so the browser treats it as a new image request.
+            img.src = `/gifs/${encodeURIComponent(gifName)}?t=${new Date().getTime()}`;
+            
+            // Wait for image to load before fading in
+            img.onload = () => {
+                container.classList.add('visible');
+            };
+        });
+
+        socket.on('hide-gif', () => {
+            console.log("Hiding GIF");
+            container.classList.remove('visible');
+            
+            // Optionally clear the src after fade out transition completes
+            setTimeout(() => {
+                if(!container.classList.contains('visible')) {
+                    img.src = "";
+                }
+            }, 500); 
+        });
+    </script>
+</body>
+</html>
