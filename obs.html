@@ -68,15 +68,17 @@
                         // Create a brand new image element to force the GIF animation to restart
                         const newImg = new Image();
                         newImg.id = 'lower-third-img';
+                        newImg.src = './' + data.gif; // Just use the raw name, browser will handle it
                         
-                        // Local file protocol cannot use ?t= query strings, so we just use the clean filename
-                        newImg.src = `./${encodeURIComponent(data.gif)}`;
-                        
-                        newImg.onload = () => {
-                            const currentImg = document.getElementById('lower-third-img');
+                        const currentImg = document.getElementById('lower-third-img');
+                        if (currentImg && currentImg.parentNode) {
                             currentImg.parentNode.replaceChild(newImg, currentImg);
+                        }
+                        
+                        // Force a small delay to ensure the browser registers the new image before fading in
+                        setTimeout(() => {
                             container.classList.add('visible');
-                        };
+                        }, 50);
                     } 
                     else if (data.action === 'stop') {
                         console.log("Stopping GIF");
