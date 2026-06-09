@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS Lower Third Overlay (Lokal)</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* Transparent background for OBS */
+            background-color: transparent;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end; /* Show lower third at the bottom */
+            padding-bottom: 50px; /* Some padding from the bottom edge */
+        }
+        
+        #lower-third-container {
+            position: absolute;
+            bottom: 50px;
+            left: 50px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            max-width: 80%; /* Adjust size as needed */
+        }
+
+        #lower-third-container.visible {
+            opacity: 1;
+        }
+
+        #lower-third-img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="lower-third-container">
+        <img id="lower-third-img" src="" alt="Lower Third">
+    </div>
+
+    <script>
+        // Use the same unique topic as the panel
+        const MQTT_TOPIC = 'lowerthird_rizkimauln_obs_channel';
+        const client = mqtt.connect('wss://broker.hivemq.com:8000/mqtt');
+        
+        const container = document.getElementById('lower-third-container');
+        const img = document.getElementById('lower-third-img');
+
+        client.on('connect', () => {
+            console.log('Connected to MQTT broker (OBS Source)');
+            client.subscribe(MQTT_TOPIC);
+        });
+
+        client.on('message', (topic, message) => {
+            if (topic === MQTT_TOPIC) {
+                try {
+                    const data = JSON.parse(message.toString());
+                    
+                    if (data.action === 'play') {
+                        console.log("Playing local GIF:", data.gif);
+                        // Because this runs locally in the same folder as the GIFs,
+                        // we can just use the direct relative filename.
+                        // We add a timestamp to force the browser to restart the animation
+                        img.src = `./${encodeURIComponent(data.gif)}?t=${new Date().getTime()}`;
+                        
+                        img.onload = () => {
+                            container.classList.add('visible');
+                        };
+                    } 
+                    else if (data.action === 'stop') {
+                        console.log("Stopping GIF");
+                        container.classList.remove('visible');
+                        setTimeout(() => {
+                            if(!container.classList.contains('visible')) {
+                                img.src = "";
+                            }
+                        }, 500); 
+                    }
+                } catch(e) {
+                    console.error("Invalid message format", e);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
