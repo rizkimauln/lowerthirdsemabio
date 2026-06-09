@@ -45,10 +45,6 @@
         <img id="lower-third-img" src="" alt="Lower Third">
     </div>
     
-    <!-- Debug Overlay -->
-    <div id="debug-overlay" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); color: white; padding: 10px; font-family: monospace; z-index: 9999;">
-        Status: Menunggu Koneksi...
-    </div>
 
     <script>
         // Use the same unique topic as the panel
@@ -57,23 +53,16 @@
         
         const container = document.getElementById('lower-third-container');
         const img = document.getElementById('lower-third-img');
-        const debug = document.getElementById('debug-overlay');
 
         client.on('connect', () => {
-            debug.innerHTML = 'Status: TERHUBUNG KE CLOUD!';
             console.log('Connected to MQTT broker (OBS Source)');
             client.subscribe(MQTT_TOPIC);
-        });
-
-        client.on('error', (err) => {
-            debug.innerHTML = 'Status: ERROR KONEKSI - ' + err;
         });
 
         client.on('message', (topic, message) => {
             if (topic === MQTT_TOPIC) {
                 try {
                     const data = JSON.parse(message.toString());
-                    debug.innerHTML = 'Menerima pesan: ' + data.action + ' -> ' + (data.gif || '');
                     
                     if (data.action === 'play') {
                         console.log("Playing local GIF:", data.gif);
