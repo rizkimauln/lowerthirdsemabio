@@ -14,8 +14,8 @@ const GIF_DIR = __dirname;
 // Serve static files from the 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve the GIFs directly from the main directory
-app.use('/gifs', express.static(GIF_DIR));
+// Serve the GIFs directly from the main directory with strong caching (1 day)
+app.use('/gifs', express.static(GIF_DIR, { maxAge: 86400000 }));
 
 // Redirect root to panel
 app.get('/', (req, res) => {

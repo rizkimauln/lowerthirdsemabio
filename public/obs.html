@@ -53,14 +53,26 @@
         socket.on('show-gif', (gifName) => {
             console.log("Showing GIF:", gifName);
             
-            // To ensure the GIF restarts its animation, we append a timestamp
-            // so the browser treats it as a new image request.
-            img.src = `/gifs/${encodeURIComponent(gifName)}?t=${new Date().getTime()}`;
+            const url = `/gifs/${encodeURIComponent(gifName)}`;
             
-            // Wait for image to load before fading in
-            img.onload = () => {
-                container.classList.add('visible');
-            };
+            // Fetch the image as a blob to utilize browser cache and restart animation instantly
+            fetch(url)
+                .then(response => response.blob())
+                .then(blob => {
+                    const objectUrl = URL.createObjectURL(blob);
+                    
+                    // Revoke previous object URL to prevent memory leaks
+                    if (img.src.startsWith('blob:')) {
+                        URL.revokeObjectURL(img.src);
+                    }
+                    
+                    img.src = objectUrl;
+                    
+                    img.onload = () => {
+                        container.classList.add('visible');
+                    };
+                })
+                .catch(err => console.error("Error fetching GIF:", err));
         });
 
         socket.on('hide-gif', () => {
