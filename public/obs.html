@@ -50,29 +50,43 @@
         const container = document.getElementById('lower-third-container');
         const img = document.getElementById('lower-third-img');
 
+        // Preload all GIFs into memory as Blobs for INSTANT playback
+        const preloadedGifs = {};
+        
+        fetch('/api/gifs')
+            .then(res => res.json())
+            .then(gifs => {
+                console.log("Preloading GIFs into memory...");
+                gifs.forEach(gifName => {
+                    fetch(`/gifs/${encodeURIComponent(gifName)}`)
+                        .then(r => r.blob())
+                        .then(blob => {
+                            preloadedGifs[gifName] = blob;
+                        })
+                        .catch(err => console.error("Failed to preload:", gifName));
+                });
+            });
+
         socket.on('show-gif', (gifName) => {
             console.log("Showing GIF:", gifName);
             
-            const url = `/gifs/${encodeURIComponent(gifName)}`;
-            
-            // Fetch the image as a blob to utilize browser cache and restart animation instantly
-            fetch(url)
-                .then(response => response.blob())
-                .then(blob => {
-                    const objectUrl = URL.createObjectURL(blob);
-                    
-                    // Revoke previous object URL to prevent memory leaks
-                    if (img.src.startsWith('blob:')) {
-                        URL.revokeObjectURL(img.src);
-                    }
-                    
-                    img.src = objectUrl;
-                    
-                    img.onload = () => {
-                        container.classList.add('visible');
-                    };
-                })
-                .catch(err => console.error("Error fetching GIF:", err));
+            const playFromBlob = (blob) => {
+                const objectUrl = URL.createObjectURL(blob);
+                if (img.src.startsWith('blob:')) {
+                    URL.revokeObjectURL(img.src);
+                }
+                img.src = objectUrl;
+                img.onload = () => container.classList.add('visible');
+            };
+
+            if (preloadedGifs[gifName]) {
+                // Play instantly from memory
+                playFromBlob(preloadedGifs[gifName]);
+            } else {
+                // Fallback if not finished preloading yet
+                const url = `/gifs/${encodeURIComponent(gifName)}`;
+                fetch(url).then(r => r.blob()).then(playFromBlob).catch(err => console.error(err));
+            }
         });
 
         socket.on('hide-gif', () => {
